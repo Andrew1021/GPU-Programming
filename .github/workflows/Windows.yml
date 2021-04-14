@@ -103,8 +103,7 @@ jobs:
     - name: Build
       working-directory: ${{ env.build_dir }}
       run: cmake --build . --config ${{ env.config }} --target ALL_BUILD --verbose
-           make
       
     - name: Execute
       working-directory: ${{ env.build_dir }}
-      run: ./main
+      run: D:\a\GPU-Programming\GPU-Programming\build\Release\main.exe
