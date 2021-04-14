@@ -7,7 +7,7 @@ This will **potentially** be expanded to investigate self-hosted runner(s) for r
 
 
 [![Windows](https://github.com/Andrew1021/GPU-Programming/workflows/Windows/badge.svg)](https://github.com/Andrew1021/GPU-Programming/actions?query=workflow%3AWindows)
-[//]: # ([![Ubuntu](https://github.com/Andrew1021/GPU-Programming/workflows/Ubuntu/badge.svg)](https://github.com/Andrew1021/GPU-Programming/actions?query=workflow%3AUbuntu))
+<!--- ([![Ubuntu](https://github.com/Andrew1021/GPU-Programming/workflows/Ubuntu/badge.svg)](https://github.com/Andrew1021/GPU-Programming/actions?query=workflow%3AUbuntu))  --->
 
 
 ## Sample application.
