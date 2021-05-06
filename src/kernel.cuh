@@ -1,8 +1,8 @@
 ﻿#include "cuda_runtime.h"
 
-#define N 50
+#define N 30
 
 int multiply(const int* matrix, const int* vector, int* returnArray);
-__global__ void multiplyKernel(int* _gpuReturn);
-__global__ void addKernel(int* _gpuReturnResult);
+__global__ void multiplyKernel(int* _gpuReturnMatrix, int* _cudaVector, int* _cudaMatrix);
+__global__ void addKernel(int* gpuReturnMatrix, int* _gpuReturnResult);
 void cudaCaller(cudaError_t command);

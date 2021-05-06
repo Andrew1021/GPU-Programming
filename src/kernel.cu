@@ -3,10 +3,6 @@
 #include <iostream>
 #include "kernel.cuh"
 
-__constant__ int cudaVector[N];
-__constant__ int cudaMatrix[N * N];
-__constant__ int cudaMatrixMultiplied[N * N];
-
 void cudaCaller(cudaError_t command) 
 {
     cudaError_t const error = command;
@@ -15,17 +11,17 @@ void cudaCaller(cudaError_t command)
     }
 }
 
-__global__ void multiplyKernel(int * _gpuReturn)
+__global__ void multiplyKernel(int * _gpuReturnMatrix, int* _cudaVector, int* _cudaMatrix)
 {
     int Index = blockIdx.x * blockDim.x + threadIdx.x;
     int threadIndex = threadIdx.x;
     if (threadIndex < N * N)
     {
-        _gpuReturn[Index] = cudaMatrix[Index] * cudaVector[threadIndex % N];
+        _gpuReturnMatrix[Index] = _cudaMatrix[Index] * _cudaVector[threadIndex % N];
     }
 }
 
-__global__ void addKernel(int * _gpuReturnResult)
+__global__ void addKernel(int* gpuReturnMatrix, int * _gpuReturnResult)
 {
     int Index = blockIdx.x * blockDim.x + threadIdx.x;
     int threadIndex = threadIdx.x;
@@ -33,7 +29,7 @@ __global__ void addKernel(int * _gpuReturnResult)
     {
         for (int i = 0; i < N; i++)
         {
-            _gpuReturnResult[Index] += cudaMatrixMultiplied[Index * N + i];
+            _gpuReturnResult[Index] += gpuReturnMatrix[Index * N + i];
         }
     }
 }
@@ -41,37 +37,54 @@ __global__ void addKernel(int * _gpuReturnResult)
 int multiply(const int* matrix, const int* vector, int * returnArray)
 {
     cudaDeviceProp properties;
-    cudaCaller(cudaGetDeviceProperties(&properties, 0));
+    properties.major = 5;
+    int Device;
+    cudaCaller(cudaChooseDevice(&Device, &properties));
+    cudaCaller(cudaSetDevice(Device));
+    cudaCaller(cudaGetDeviceProperties(&properties, Device));
+
+    int* returnArrayMultiplied = new int[N * N];
 
     int* gpuReturnMatrix = NULL;
     int* gpuReturnResult = NULL;
+    int* gpuArrayMultiplied = NULL;
+
+    int* cudaVector = NULL;
+    int* cudaMatrix = NULL;
 
     const int gpuVectorBufferSize = sizeof(int) * N;
     const int gpuMatrixBufferSize = sizeof(int) * N * N;
 
-    cudaCaller(cudaMalloc((void**)&gpuReturnMatrix, gpuMatrixBufferSize));
     cudaCaller(cudaMalloc((void**)&gpuReturnResult, gpuVectorBufferSize));
 
-    cudaCaller(cudaMemcpyToSymbol(cudaMatrix, matrix, gpuMatrixBufferSize));
-    cudaCaller(cudaMemcpyToSymbol(cudaVector, vector, gpuVectorBufferSize));
+    cudaCaller(cudaMalloc((void**)&gpuReturnMatrix, gpuMatrixBufferSize));
+    cudaCaller(cudaMalloc((void**)&cudaVector, gpuVectorBufferSize));
+    cudaCaller(cudaMalloc((void**)&cudaMatrix, gpuMatrixBufferSize));
 
+    cudaCaller(cudaMemcpy(cudaVector, vector, gpuVectorBufferSize, cudaMemcpyHostToDevice));
+    cudaCaller(cudaMemcpy(cudaMatrix, matrix, gpuMatrixBufferSize, cudaMemcpyHostToDevice));
+    
     dim3 blockSettings((N * N + properties.maxThreadsPerBlock - 1) / properties.maxThreadsPerBlock);
     dim3 threadSettings(properties.maxThreadsPerBlock);
-    multiplyKernel<<<blockSettings, threadSettings>>>(gpuReturnMatrix);
+    multiplyKernel<<<blockSettings, threadSettings>>>(gpuReturnMatrix, cudaVector, cudaMatrix);
 
-    cudaError_t cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-    }
+    cudaCaller(cudaDeviceSynchronize());
 
-    cudaCaller(cudaMemcpyToSymbol(cudaMatrixMultiplied, gpuReturnMatrix, gpuMatrixBufferSize));
+    cudaCaller(cudaMemcpy(returnArrayMultiplied, gpuReturnMatrix, gpuMatrixBufferSize, cudaMemcpyDeviceToHost));
+
+    cudaCaller(cudaMalloc((void**)&gpuArrayMultiplied, gpuMatrixBufferSize));
+    cudaCaller(cudaMemcpy(gpuArrayMultiplied, returnArrayMultiplied, gpuMatrixBufferSize, cudaMemcpyHostToDevice));
 
     dim3 blockSettings2((N + properties.maxThreadsPerBlock - 1) / properties.maxThreadsPerBlock);
-    addKernel<<<blockSettings2, threadSettings>>>(gpuReturnResult);
+    addKernel<<<blockSettings2, threadSettings>>>(gpuArrayMultiplied, gpuReturnResult);
 
     cudaCaller(cudaMemcpy(returnArray, gpuReturnResult, gpuVectorBufferSize, cudaMemcpyDeviceToHost));
 
+    cudaCaller(cudaFree(gpuReturnResult));
     cudaCaller(cudaFree(gpuReturnMatrix));
+    cudaCaller(cudaFree(cudaVector));
+    cudaCaller(cudaFree(cudaMatrix));
+    cudaCaller(cudaFree(gpuArrayMultiplied));
 
     return 0;
 }

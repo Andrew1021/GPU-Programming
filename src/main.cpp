@@ -4,9 +4,9 @@
 
 int main()
 {
-    int matrix[N * N];
-    int vector[N];
-    int returnArray[N] = { 0 };
+    int* matrix = new int[N * N];
+    int* vector = new int[N];
+    int* returnArray = new int[N];
 
     for (int i = 0; i < N; i++)
     {
