@@ -1,6 +1,10 @@
+# Cuda
 *.i
 *.ii
 *.gpu
 *.ptx
 *.cubin
 *.fatbin
+
+# C++
+build/
